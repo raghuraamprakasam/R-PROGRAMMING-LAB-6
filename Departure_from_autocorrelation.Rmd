@@ -1,0 +1,156 @@
+---
+title: "Departure From Autocorrelation"
+author: "Rgahuraam P (2648130)"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. INTRODUCTION
+Simple Linear Regression is a statistical technique used to examine and establish the linear relationship between two quantitative variables. In this study, an attempt is made to analyse the relationship between Inflation and Unemployment using a Simple Linear Regression model.
+
+Inflation refers to the general increase in the prices of goods and services over a period of time, whereas unemployment represents the percentage of the labour force that is unemployed but actively seeking employment.
+
+The study considers the inflation rate as the independent variable and the unemployment rate as the dependent variable. A regression model is developed to understand how changes in inflation are associated with changes in unemployment.
+
+Further, residual analysis is carried out to examine the adequacy of the fitted regression model, particularly whether the residuals are uncorrelated. If autocorrelation is detected in the residuals, appropriate remedial measures will be applied to improve the model and address the departure from the assumption of uncorrelated errors.
+
+## 2. OBJECTIVES
+1. To study the linear relationship between inflation and unemployment using Simple Linear Regression.
+2. To identify the nature and strength of the relationship between the independent and dependent variables.
+3. To estimate the regression coefficients and develop a suitable Simple Linear Regression model.
+4. To examine the adequacy of the fitted model through residual analysis.
+5. To check whether the residuals satisfy the assumption of uncorrelated errors.
+6. To identify the presence of autocorrelation in the residuals, if any.
+7. To apply appropriate remedial measures in case of autocorrelation and obtain an improved regression model.
+8. To compare the original and remedial models and interpret the results.
+
+## 3. ANALYSIS
+```{r}
+library(readxl)
+data <- read_excel("C:/Users/raghu/OneDrive/Desktop/STUDIES/Guithub + Practical college/practicals/R programming/Lab_6/Philips dataset.xlsx")
+head(data)
+```
+```{r}
+dim(data)
+```
+```{r}
+str(data)
+```
+## 3.1 - SLRM
+```{r}
+x <- data$"unemp"
+y <- data$"inf"
+cor(x,y)
+```
+## There is a weak correlation among the variables
+```{r}
+# Scatter plot
+plot(x,y, main="Unemployment VS Inflation", xlab="Unemployment", ylab="Inflation", pch=19)
+model=lm(y~x, data=data) #fitting the model
+abline(model, lwd=2, colour = "red") #regression line
+
+summary(model)
+```
+## 3.2 - Checking the Assumptions
+## 3.2.1 - Checking the normality of data.
+```{r}
+# Shapiro wilk test 
+library(lmtest)
+res <- residuals(model)
+shapiro.test(res)
+## qq plot
+qqnorm(res)
+qqline(res)
+```
+## Interpretation
+ H0:The errors are normally distributed.
+ H1: The errors are not normally distributed.
+Therefore the data is not normally distributed, and is also verified by doing the qq plot.
+
+## 3.2.2 cheking whether the varinace are constant or not.
+```{r}
+## BP test
+res <- model$residuals
+plot(fitted.values(model), res)
+abline(h=0,col='blue',lwd=2)
+library(lmtest)
+bptest(model)
+```
+## Interpretation
+ H0:The errors are following constant varinace.
+ H1: The errors are not following constant varinace.
+ Since the p-value is greater than 0.05 we fail to reject the null hypothesis which mean the variance are always constant.
+The errors are following constant varinace.
+
+#### 3.2.3 checking whther there is an serial correlation among the errors.
+```{r}
+dwtest(model)
+acf(res)
+```
+## Interpretation
+ H0: There is no autocorrelation among the residuals.
+ H1: There is positive autocorrelation among the residuals.
+  Since the p-value < 0.05, we reject The H0. Therefore, there is evidence of positive autocorrelation among the residuals. 
+
+## 3.3 - Fixing the autocorrelation
+```{r}
+library(timeSeries) #time series package
+library(forecast) #for prediction 
+```
+
+```{r}
+auto.arima(res) #to see the ar model- we want ar1 (1,0,0)
+arima(res, order=c(1,0,0)) #fitting ar1 model
+```
+```{r}
+phi=0.5918  
+
+deltaerror_cap<-c()
+
+for (i in 1:49) {
+  deltaerror_cap[i]<-phi*res[i-1]
+}
+deltaerror_cap
+deltaerror_cap[1]<-0
+deltaerror_cap
+
+Yt_star<- c()
+for (i in 1:49) {
+  Yt_star[i]<-y[i]-(phi*y[i-1])
+}
+Yt_star
+Yt_star[1]<-0
+Yt_star
+
+Xt_star<- c()
+for (i in 1:49) {
+  Xt_star[i]<-x[i]-(phi*x[i-1])
+}
+Xt_star
+Xt_star[1]<-0
+Xt_star
+
+
+model_re<-lm(Yt_star~Xt_star)
+res_re<-model_re$residuals
+acf(res_re)
+```
+## INTERPRETATION
+By this process we have used Cochran - Orchutt procedure to convert the eqation which had auto correlation to unocrrelated variance among the varinace.
+
+## 4. CONCLUSION
+The study was conducted to examine the linear relationship between inflation and unemployment using Simple Linear Regression. The fitted regression model was evaluated by checking the major assumptions of regression through residual analysis.
+
+During the diagnostic analysis, it was observed that the normality assumption was not satisfied, indicating that the residuals were not normally distributed. However, the assumption of constant variance (homoscedasticity) was satisfied, suggesting that the variance of the residuals remained approximately constant across the observations.
+
+Further, the analysis revealed the presence of autocorrelation among the residuals, indicating a departure from the assumption of uncorrelated errors. To overcome this issue, the Cochrane–Orcutt procedure was applied as a remedial measure. This procedure accounts for the autocorrelation by estimating the error correlation parameter and transforming the regression model accordingly.
+
+After applying the Cochrane–Orcutt procedure, the autocorrelation problem was addressed, resulting in an improved regression model with respect to the uncorrelated errors assumption.
+
+Overall, the study demonstrates that Simple Linear Regression can be used to examine the relationship between inflation and unemployment. Although the normality assumption was not satisfied, the constant variance assumption was maintained, and the departure from uncorrelated errors was addressed using the Cochrane–Orcutt procedure.
+
+
